@@ -8,7 +8,7 @@ import sys
 import subprocess
 
 
-def install_to(target: str, package: str) -> None:
+def install_to(target: pathlib.Path, package: pathlib.Path) -> None:
     r"""Installs a package in a given target.
 
     Tries to install a package using pip.
@@ -31,6 +31,7 @@ def install_to(target: str, package: str) -> None:
 
     Examples
     --------
+    >>>
     """
     args: List[str] = [
         sys.executable,
@@ -44,7 +45,7 @@ def install_to(target: str, package: str) -> None:
     ]
     try:
         subprocess.run(args)
-    except Exception as exc:
+    except subprocess.CalledProcessError as exc:
         print(f"{package} couldn't be installed due to:")
         raise exc
 
