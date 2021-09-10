@@ -231,7 +231,7 @@ man_pages = [
 texinfo_documents = [
     ('index', 'top_pypi_source_code_stats', u'top_pypi_source_code_stats Documentation',
      u"Agustín", 'top_pypi_source_code_stats',
-     'Python's source code statistics from top PyPI packages', 'Miscellaneous'),
+     "Python's source code statistics from top PyPI packages", 'Miscellaneous'),
 ]
 
 # Documents to append as an appendix to all manuals.
