@@ -7,8 +7,16 @@ import pathlib
 import sys
 import subprocess
 
+import reducto.package as pkg
+import reducto.src as src_
 
-def install_to(target: pathlib.Path, package: pathlib.Path) -> None:
+import src.constants as cte
+
+
+def install(
+        package: pathlib.Path,
+        target: pathlib.Path = cte.INTERIM
+) -> None:
     r"""Installs a package in a given target.
 
     Tries to install a package using pip.
@@ -23,15 +31,18 @@ def install_to(target: pathlib.Path, package: pathlib.Path) -> None:
 
     Parameters
     ----------
-    target
-    package
+    package : pathlib.Path
+        Package to install. dist-info.
+    target : pathlib.Path
+        Directory where the package is installed.
 
     Returns
     -------
+    None
 
     Examples
     --------
-    >>>
+    >>> install(str(cte.RAW / 'black-21.8b0'))
     """
     args: List[str] = [
         sys.executable,
@@ -39,15 +50,35 @@ def install_to(target: pathlib.Path, package: pathlib.Path) -> None:
         "pip",
         "install",
         "--no-deps",
+        "--upgrade",  # During test, overwrite if already present
         "-t",
         target,
         package,
     ]
     try:
-        subprocess.run(args)
+        subprocess.check_output(args)
     except subprocess.CalledProcessError as exc:
         print(f"{package} couldn't be installed due to:")
         raise exc
+
+
+def distribution_candidates() -> List[pathlib.Path]:
+    """Obtain the distribution candidates to be passed to find_distribution.
+
+    Check possible candidates to be fed to reducto
+
+    Returns
+    -------
+
+    """
+    candidates: List[pathlib.Path] = []
+    for path in cte.INTERIM.iterdir():
+        if pkg.Package.validate(path):
+            pass
+        elif src_.SourceFile.validate(path):
+            pass
+
+    pass
 
 
 def find_distribution(path: str) -> pathlib.Path:
