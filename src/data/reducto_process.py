@@ -23,6 +23,7 @@ def install(
     TODO:
         Installing this way needs a setup.py
         - Needs a check for flit, poetry and other libraries
+        In tat case pip_install through pypi
 
     Runs a command like the following:
     python -m pip install --no-deps --target
@@ -58,8 +59,7 @@ def install(
     try:
         subprocess.check_output(args)
     except subprocess.CalledProcessError as exc:
-        print(f"{package} couldn't be installed due to:")
-        raise exc
+        raise exc.output
 
 
 def distribution_candidates() -> List[pathlib.Path]:
@@ -73,12 +73,13 @@ def distribution_candidates() -> List[pathlib.Path]:
     """
     candidates: List[pathlib.Path] = []
     for path in cte.INTERIM.iterdir():
-        if pkg.Package.validate(path):
-            pass
-        elif src_.SourceFile.validate(path):
+        try:
+            if not pkg.Package.validate(path) or not src_.SourceFile.validate(path):
+                candidates.append(path)
+        except (pkg.PackageError, src_.SourceFileError) as e:
             pass
 
-    pass
+    return candidates
 
 
 def find_distribution(path: str) -> pathlib.Path:
@@ -91,6 +92,10 @@ def find_distribution(path: str) -> pathlib.Path:
         pip install black.
     - One or more packages, i.e.
         pip install PyYAML
+
+    TODO:
+        Use
+        difflib.get_close_matches('black', ['black', 'black_primer', 'blackd', 'blib2to3'])
 
     Parameters
     ----------
