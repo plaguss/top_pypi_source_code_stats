@@ -6,7 +6,7 @@ import pathlib
 
 from tinydb import TinyDB, Query
 
-DB_PATH = pathlib.Path.cwd() / 'data' / 'interim' / 'db.json'
+DB_PATH = pathlib.Path('.').resolve() / 'data' / 'processed' / 'db.json'
 
 db = TinyDB(DB_PATH, sort_keys=True, indent=4)
 
@@ -34,10 +34,3 @@ example = {
     'package_name_1': 'package_info_1',  # Obtained
     'package_name_2': 'package_info_2',
 }
-
-# TODO: Example of package download to a defined location.
-#   - Create a different package inside /data/raw to get the packages.
-# python -m pip install --no-deps --target /home/agustin/github_repos/top_pypi_source_code_stats/data/interim/ /home/agustin/github_repos/top_pypi_source_code_stats/data/raw/black-21.8b0/
-
-# import importlib
-# importlib.util.find_spec('click')
