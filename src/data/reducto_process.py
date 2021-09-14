@@ -1,16 +1,21 @@
 """Contains the functionalities to install the libraries and run reducto on them.
 """
+
 import difflib
 from typing import List
 import pathlib
 import sys
 import subprocess
 import shutil
+import logging
 
 import reducto.package as pkg
 import reducto.src as src_
 
 import src.constants as cte
+
+
+logger = logging.getLogger(__name__)
 
 
 class PackageNameNotFound(Exception):
@@ -179,8 +184,9 @@ def run_reducto(
     ]
     try:
         subprocess.check_output(args)
-        print(f"Reducto report: {str(output_path / (target.stem + '.json'))}")
+        logger.info(f"Reducto report created: {output}")
     except subprocess.CalledProcessError as exc:
+        logger.error(f"Reducto failed on: {target}")
         raise exc.output
 
 
@@ -211,4 +217,5 @@ def clean_folder(path: pathlib.Path) -> None:
             p.unlink()
         elif p.is_dir():
             shutil.rmtree(p)
-    print(f'Everything removed on: {path}')
+
+    logger.info(f'Everything removed on: {path}')
