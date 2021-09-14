@@ -6,6 +6,7 @@ from typing import List
 import pathlib
 import sys
 import subprocess
+import shutil
 
 import reducto.package as pkg
 import reducto.src as src_
@@ -15,7 +16,7 @@ import src.constants as cte
 
 def install(
         package: pathlib.Path,
-        target: pathlib.Path = cte.INTERIM
+        target: pathlib.Path = cte.DISTRIBUTIONS
 ) -> None:
     r"""Installs a package in a given target.
 
@@ -43,8 +44,11 @@ def install(
 
     Examples
     --------
-    >>> install(str(cte.RAW / 'black-21.8b0'))
+    >>> install(cte.RAW / 'black-21.8b0')
     """
+    if not target.is_dir():
+        target.mkdir()
+
     args: List[str] = [
         sys.executable,
         "-m",
@@ -53,8 +57,8 @@ def install(
         "--no-deps",
         "--upgrade",  # During test, overwrite if already present
         "-t",
-        target,
-        package,
+        str(target),
+        str(package),
     ]
     try:
         subprocess.check_output(args)
@@ -96,6 +100,10 @@ def find_distribution(path: str) -> pathlib.Path:
     TODO:
         Use
         difflib.get_close_matches('black', ['black', 'black_primer', 'blackd', 'blib2to3'])
+        >>> difflib.get_close_matches('yaml', ['PyYAML'])
+        []
+        >>> difflib.get_close_matches('yaml', ['PyYAML'.lower()])
+        ['pyyaml']
 
     Parameters
     ----------
@@ -129,11 +137,21 @@ def insert_reports():
     pass
 
 
-def remove_reports():
-    """Remove after a process is done.
+def clean_folder(path: pathlib.Path) -> None:
+    """Remove every file/folder in the given path.
 
-    Returns
-    -------
+    Parameters
+    ----------
+    path : pathlib.Path
+        Path to be cleaned.
 
+    Examples
+    --------
+    >>> clean_folder(cte.DISTRIBUTIONS)
     """
-    pass
+    for p in path.iterdir():
+        if p.is_file():
+            p.unlink()
+        elif p.is_dir():
+            shutil.rmtree(p)
+    print(f'Everything removed on: {path}')
