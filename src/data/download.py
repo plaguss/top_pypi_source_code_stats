@@ -183,10 +183,6 @@ def download_top_packages(
         dump_config(directory, read_config(directory) + caches)
 
 
-def find_source_package():
-    pass
-
-
 def main():
     parser = ArgumentParser()
     parser.add_argument("directory", type=Path)
