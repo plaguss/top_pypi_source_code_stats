@@ -227,16 +227,6 @@ def read_reducto_report(package: str) -> Union[rp.SourceReportType, rp.PackageRe
         raise FileNotFoundError(f"reducto report doesn't exists: {report_path}")
 
 
-def insert_reports():
-    """Insert the reducto report of the library to db.json.
-
-    Returns
-    -------
-
-    """
-    pass
-
-
 def clean_folder(path: pathlib.Path) -> None:
     """Remove every file/folder in the given path.
 
