@@ -212,6 +212,11 @@ def read_reducto_report(package: str) -> Union[rp.SourceReportType, rp.PackageRe
     ------
     FileNotFoundError
         If the file doesn't exists.
+
+    Examples
+    --------
+    >>> read_reducto_report('click')
+    {'click': {'lines': 9918, 'number_of_functions': 469,...}
     """
     report_path: pathlib.Path = cte.REDUCTO_REPORTS / (package + '.json')
 
