@@ -2,15 +2,20 @@
 """
 
 import difflib
-from typing import List
+from typing import (
+    List,
+    Union
+)
 import pathlib
 import sys
 import subprocess
 import shutil
 import logging
+import json
 
 import reducto.package as pkg
 import reducto.src as src_
+import reducto.reports as rp
 
 import src.constants as cte
 
@@ -188,6 +193,33 @@ def run_reducto(
     except subprocess.CalledProcessError as exc:
         logger.error(f"Reducto failed on: {target}")
         raise exc.output
+
+
+def read_reducto_report(package: str) -> Union[rp.SourceReportType, rp.PackageReportType]:
+    """Read the reducto report of a given package.
+
+    Parameters
+    ----------
+    package : str
+        Name of the package to download.
+
+    Returns
+    -------
+    report : dict
+        reducto package report.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the file doesn't exists.
+    """
+    report_path: pathlib.Path = cte.REDUCTO_REPORTS / (package + '.json')
+
+    if report_path.is_file():
+        with open(report_path, 'r') as f:
+            return json.load(f)
+    else:
+        raise FileNotFoundError(f"reducto report doesn't exists: {report_path}")
 
 
 def insert_reports():
