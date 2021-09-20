@@ -1,3 +1,15 @@
+"""
+After installing the package (pip install -e .)
+Example run:
+$ reducto_reports --stop=1
+
+TODO:
+    - Add logs of the process.
+    - Ensure unnecesary data is cleaned after.
+    - Store the total time of the process in the database.
+
+"""
+
 # -*- coding: utf-8 -*-
 from typing import List
 
@@ -18,6 +30,12 @@ logger = logging.getLogger(__name__)
 
 
 @click.command()
+@click.option(
+    '--stop',
+    default=-1,
+    show_default=True,
+    help='Number of packages to download.'
+)
 def reducto_reports(stop: int = -1):
     """Downloads every package in top-pypi-packages-365-days.json, extracts the reducto
     report and inserts it to the db.json, and then removes the downloaded package.
