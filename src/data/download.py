@@ -122,7 +122,13 @@ def get_top_packages(days: Optional[Days] = None, local: bool = True) -> List[st
 
     Returns
     -------
+    packages : List[str]
+        List of packages.
 
+    Examples
+    --------
+    >>> get_top_packages()
+    ['urllib3', 'six', 'botocore', 'setuptools', 'requests',...
     """
     if not local:  # original function
         with urlopen(PYPI_TOP_PACKAGES.format(days=days)) as page:
