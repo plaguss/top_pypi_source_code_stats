@@ -84,6 +84,11 @@ def download_and_extract(
     Returns
     -------
 
+    Examples
+    --------
+    >>> import src.constants as cte
+    >>> download_and_extract('six', cte.RAW)
+    PosixPath('/home/agustin/github_repos/top_pypi_source_code_stats/data/raw/six-1.16.0')
     """
     try:
         source = get_package_source(package, version)
