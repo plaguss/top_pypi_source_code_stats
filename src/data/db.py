@@ -3,15 +3,19 @@
 """
 
 from typing import Dict
-import pathlib
 
-from tinydb import TinyDB, Query
+import tinydb
+from tinydb import TinyDB
 
-DB_PATH = pathlib.Path('.').resolve() / 'data' / 'processed' / 'db.json'
+import src.constants as cte
+import src.data.reducto_process as rp
 
-db = TinyDB(DB_PATH, sort_keys=True, indent=4)
+Report = Dict[str, Dict[str, int]]
+# DB_PATH = pathlib.Path('.').resolve() / 'data' / 'processed' / 'db.json'
 
-reducto_reports_table = db.table('reducto_reports')
+# db = TinyDB(DB_PATH, sort_keys=True, indent=4)
+#
+# reducto_reports_table = db.table('reducto_reports')
 
 
 # db.insert({'type': 'peach', 'count': 3})
@@ -40,18 +44,76 @@ reducto_reports_table = db.table('reducto_reports')
 # }
 
 
-def insert_reducto_reports(report: Dict) -> None:
-    """Insert the reducto report of the package to db.json.
 
-    Parameters
-    ----------
-    report : Dict
+class DBStore:
+    """
+    Deal with db interaction in this class
 
     Examples
     --------
-    >>> import src.data.reducto_process as rp
-    >>> report = rp.read_reducto_report('click')
-    >>> insert_reducto_reports(report)
+    >>> dbs = DBStore()
     """
-    reducto_reports_table.insert(report)
+    def __init__(self):
+        self._db = TinyDB(cte.DB_PATH, sort_keys=True, indent=4)
+
+    def __repr__(self):
+        return type(self).__name__ + f"({self._db})"
+
+    @property
+    def db(self) -> TinyDB:
+        return self._db
+
+    @property
+    def reducto_reports_table(self) -> tinydb.database.Table:
+        """Returns the table containing the reducto reports. """
+        return self.db.table('reducto_reports')
+
+    def insert_reducto_report(self, report: Report) -> None:
+        """Insert a register in the corresponding table.
+
+        Parameters
+        ----------
+        report : dict
+            Reducto report.
+
+        Examples
+        --------
+        >>> import src.data.reducto_process as rp
+        >>> report = rp.read_reducto_report('click')
+        >>> dbs.insert_reducto_reports(report)
+        """
+        self.reducto_reports_table.insert(report)
+
+    def get_reducto_report(self, name: str) -> Report:
+        """Obtain the report of a package if already inserted.
+
+        Loops through the reducto reports table checking for the name and returns the
+        whole report.
+
+        Parameters
+        ----------
+        name : str
+            Name of the package.
+
+        Returns
+        -------
+        report : Report
+
+        Raises
+        ------
+        rp.PackageNameNotFound
+            If the package wasn't found.
+
+        Examples
+        --------
+        >>> dbs.get_reducto_report('click')
+        {'click': {'average_function_length': 11, 'blank_lines': 1518,...
+        'comment_lines': 496, 'docstring_lines': 1479, 'lines': 9918,...
+        'number_of_functions': 469, 'source_files': 17, 'source_lines': 6425}}
+        """
+        for pkg in self.reducto_reports_table.all():
+            if name in pkg.keys():
+                return pkg
+
+        raise rp.PackageNameNotFound('name')
 
