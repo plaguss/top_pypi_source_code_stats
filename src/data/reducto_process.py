@@ -21,6 +21,7 @@ import src.constants as cte
 
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 class PackageNameNotFound(Exception):
@@ -100,11 +101,23 @@ def distribution_candidates() -> List[pathlib.Path]:
     """
     candidates: List[pathlib.Path] = []
     for path in cte.DISTRIBUTIONS.iterdir():
+        # try:
+        #     if not pkg.Package.validate(path) or not src_.SourceFile.validate(path):
+        #         candidates.append(path)
+        # except (pkg.PackageError, src_.SourceFileError) as e:
+        #     pass
         try:
-            if not pkg.Package.validate(path) or not src_.SourceFile.validate(path):
+            if not pkg.Package.validate(path):
                 candidates.append(path)
-        except (pkg.PackageError, src_.SourceFileError) as e:
-            pass
+        except pkg.PackageError:
+            try:
+                if not src_.SourceFile.validate(path):
+                    candidates.append(path)
+            except src_.SourceFileError as e:
+                pass
+
+        except Exception as exc:
+            logger.warning('No packages where found')
 
     return candidates
 
