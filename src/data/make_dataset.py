@@ -99,10 +99,14 @@ def extract_reducto(pkg: str = None, database: db.DBStore = None) -> None:
         Instance of DBStore.
     """
     try:
-        database.get_reducto_status(pkg)
+        check = database.get_reducto_status(pkg)
+        if check:
+            logger.info(f"Skipping, package already downloaded: {pkg}.")
+        else:
+            logger.info(f"Skipping, errored package, needs review: {pkg}.")
     except rp.PackageNameNotFound:
-        logger.info(f"Skipping: {pkg}, already downloaded.")
-        return
+        # Package not downloaded, keep going.
+        pass
 
     # 1) Download the package
     pkg_path: pathlib.Path = dwn.download_and_extract(pkg, cte.RAW)
