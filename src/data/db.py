@@ -128,7 +128,7 @@ class DBStore:
         >>> import src.data.reducto_process as rp
         >>> dbs.insert_reducto_status({'click': 2.1})
         """
-        self.insert_reducto_status.insert(status)
+        self.reducto_status_table.insert(status)
 
     def get_reducto_report(self, name: str) -> Report:
         """Obtain the report of a package if already inserted.
