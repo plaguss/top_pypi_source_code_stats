@@ -68,6 +68,11 @@ class DBStore:
         """Returns the table containing the reducto reports. """
         return self.db.table('reducto_reports')
 
+    @property
+    def reducto_timing_table(self) -> tinydb.database.Table:
+        """Returns the table containing the reducto reports. """
+        return self.db.table('reducto_timing')
+
     def insert_reducto_report(self, report: Report) -> None:
         """Insert a register in the corresponding table.
 
@@ -83,6 +88,21 @@ class DBStore:
         >>> dbs.insert_reducto_reports(report)
         """
         self.reducto_reports_table.insert(report)
+
+    def insert_reducto_timing(self, timing: Dict[str, float]) -> None:
+        """Insert a register in the corresponding table.
+
+        Parameters
+        ----------
+        timing : float
+            Dict with package name and seconds elapsed during the process.
+
+        Examples
+        --------
+        >>> import src.data.reducto_process as rp
+        >>> dbs.insert_reducto_reports({'click': 2.1})
+        """
+        self.reducto_timing_table.insert(timing)
 
     def get_reducto_report(self, name: str) -> Report:
         """Obtain the report of a package if already inserted.
