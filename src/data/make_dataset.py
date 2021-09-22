@@ -19,9 +19,10 @@ import click
 import logging
 from pathlib import Path
 # from dotenv import find_dotenv, load_dotenv
-import concurrent.futures
-from concurrent.futures import ThreadPoolExecutor
+from time import time
+from mpire import WorkerPool
 from os import cpu_count
+from functools import partial
 
 import src.data.download as dwn
 import src.constants as cte
@@ -37,25 +38,6 @@ logger.setLevel(logging.INFO)
 
 workers = cpu_count() - 1
 
-
-# with ThreadPoolExecutor(max_workers=workers) as executor:
-#     bound_downloader = partial(get_package, directory=directory)
-#     for package, package_directory in executor.map(
-#             bound_downloader, packages
-#     ):
-#         if package_directory is not None:
-#             caches.append(package)
-#             print(
-#                 f"Package {package_directory} is created for {package}."
-#             )
-#
-# with ThreadPoolExecutor() as executor:
-#     futures = []
-#     for url in wiki_page_urls:
-#         futures.append(executor.submit(get_wiki_page_existence, wiki_page_url=url))
-#     for future in concurrent.futures.as_completed(futures):
-#         print(future.result())
-#
 
 @click.group()
 def make_dataset():
@@ -93,11 +75,18 @@ def reducto_reports(start: int = 0, stop: int = -1):
     dbs: db.DBStore = db.DBStore()
     # Download the packages.
     packages: List[str] = dwn.get_top_packages()
-    for pkg in packages[start:stop]:
+    subset = packages[start:stop]  # Maybe extract to a small list.
+
+    # Fails to run in parallel, just run it for the moment...
+    for pkg in subset:
         extract_reducto(pkg, dbs)
 
+    # partial_reducto = partial(extract_reducto, database=dbs)
+    # with WorkerPool(n_jobs=workers) as pool:
+    #     results = pool.map(partial_reducto, subset, progress_bar=True)
 
-def extract_reducto(pkg: str, database: db.DBStore) -> None:
+
+def extract_reducto(pkg: str = None, database: db.DBStore = None) -> None:
     """Extracts the reducto report of a python package.
 
     Downloads, installs, grabs the content and removes everything when finished.
@@ -109,13 +98,25 @@ def extract_reducto(pkg: str, database: db.DBStore) -> None:
     database : db.DBStore
         Instance of DBStore.
     """
+    try:
+        database.get_reducto_status(pkg)
+    except rp.PackageNameNotFound:
+        logger.info(f"Skipping: {pkg}, already downloaded.")
+        return
+
     # 1) Download the package
     pkg_path: pathlib.Path = dwn.download_and_extract(pkg, cte.RAW)
     # 2) Install it
     try:
-        rp.install(pkg_path)
-        rp.clean_folder(cte.RAW)
+        try:
+            rp.install(pkg_path)
+        except Exception as exc:
+            # Installing from the download failed, install directly from pypi.
+            rp.install(pkg)
+        finally:
+            rp.clean_folder(cte.RAW)
         logger.info(f"{pkg} installed.")
+
     except Exception as exc:
         # TODO: Register to db
         logger.error(f"{pkg_path} could not be installed due to: {exc}.")
@@ -127,23 +128,36 @@ def extract_reducto(pkg: str, database: db.DBStore) -> None:
     except rp.PackageNameNotFound:
         # TODO: Register to db
         logger.error(f"{pkg} could not be found.")
+        return
 
     # 4) Run reducto on it.
     if target:
         try:
+            tstart = time()
             rp.run_reducto(target)
+            # Check time running
+            database.insert_reducto_timing({pkg: time() - tstart})
             rp.clean_folder(cte.DISTRIBUTIONS)
             logger.info(f"Reducto run on: {pkg}.")
         except rp.PackageNameNotFound:
             # TODO: Register to db
             logger.error(f"{pkg} could not be found.")
+            return
+    else:
+        database.insert_reducto_status({pkg: False})
+        logger.error(f"find_package failed on {pkg} .")
+        return
 
     # 5) Read report:
-    report: db.Report = rp.read_reducto_report(pkg)
+    report: db.Report = rp.read_reducto_report(target.stem)
+    # report: db.Report = rp.read_reducto_report(pkg)
     # 6) Insert to db.
     database.insert_reducto_report(report)
     # 7) Clean folders after.
     rp.clean_folder(cte.REDUCTO_REPORTS)
+
+    # 8) Insert status
+    database.insert_reducto_status({pkg: True})
 
     logger.info(f"Process finished: {pkg}.")
 
