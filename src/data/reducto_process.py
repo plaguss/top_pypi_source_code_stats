@@ -38,16 +38,12 @@ class PackageNameNotFound(Exception):
 
 
 def install(
-        package: pathlib.Path,
+        package: Union[pathlib.Path, str],
         target: pathlib.Path = cte.DISTRIBUTIONS
 ) -> None:
     r"""Installs a package in a given target.
 
     Tries to install a package using pip.
-    TODO:
-        Installing this way needs a setup.py
-        - Needs a check for flit, poetry and other libraries
-        In tat case pip_install through pypi
 
     Runs a command like the following:
     python -m pip install --no-deps --target
@@ -61,16 +57,17 @@ def install(
     target : pathlib.Path
         Directory where the package is installed.
 
-    Returns
-    -------
-    None
-
     Examples
     --------
     >>> install(cte.RAW / 'black-21.8b0')
+
+    or
+
+    >>> install('black')
     """
-    if not target.is_dir():
-        target.mkdir()
+    if isinstance(target, pathlib.Path):
+        if not target.is_dir():
+            target.mkdir()
 
     args: List[str] = [
         sys.executable,
@@ -101,11 +98,6 @@ def distribution_candidates() -> List[pathlib.Path]:
     """
     candidates: List[pathlib.Path] = []
     for path in cte.DISTRIBUTIONS.iterdir():
-        # try:
-        #     if not pkg.Package.validate(path) or not src_.SourceFile.validate(path):
-        #         candidates.append(path)
-        # except (pkg.PackageError, src_.SourceFileError) as e:
-        #     pass
         try:
             if not pkg.Package.validate(path):
                 candidates.append(path)
