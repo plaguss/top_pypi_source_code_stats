@@ -7,8 +7,8 @@ setup(
     description="Python's source code statistics from top PyPI packages",
     author='Agustín',
     license='MIT',
-    entry_points='''
+    entry_points="""
        [console_scripts]
-       reducto_reports=src.data.make_dataset:reducto_reports
-   ''',
+       make_dataset=src.data.make_dataset:make_dataset
+   """,
 )
