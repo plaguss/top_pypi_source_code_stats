@@ -70,8 +70,18 @@ class DBStore:
 
     @property
     def reducto_timing_table(self) -> tinydb.database.Table:
-        """Returns the table containing the reducto reports. """
+        """Returns the table containing the reducto timing.
+        Contains the time in seconds reducto took to run.
+        """
         return self.db.table('reducto_timing')
+
+    @property
+    def reducto_status_table(self) -> tinydb.database.Table:
+        """Returns the table containing the reducto reports.
+        Contains the status of the library. If was already detected, and
+        in that case if worked or not.
+        """
+        return self.db.table('reducto_status')
 
     def insert_reducto_report(self, report: Report) -> None:
         """Insert a register in the corresponding table.
@@ -104,6 +114,22 @@ class DBStore:
         """
         self.reducto_timing_table.insert(timing)
 
+    def insert_reducto_status(self, status: Dict[str, bool]) -> None:
+        """Insert a register in the corresponding table.
+
+        Parameters
+        ----------
+        status : Dict[str, str]
+            {'click': True}, the package worked properly.
+            {'click': False}, something failed.
+
+        Examples
+        --------
+        >>> import src.data.reducto_process as rp
+        >>> dbs.insert_reducto_status({'click': 2.1})
+        """
+        self.insert_reducto_status.insert(status)
+
     def get_reducto_report(self, name: str) -> Report:
         """Obtain the report of a package if already inserted.
 
@@ -135,5 +161,36 @@ class DBStore:
             if name in pkg.keys():
                 return pkg
 
-        raise rp.PackageNameNotFound('name')
+        raise rp.PackageNameNotFound(name)
 
+    def get_reducto_status(self, name: str) -> Report:
+        """Obtain the status of a package if already inserted.
+
+        TODO: REVIEW DOCSTRING!
+
+        Parameters
+        ----------
+        name : str
+            Name of the package.
+
+        Returns
+        -------
+        report : Report
+
+        Raises
+        ------
+        rp.PackageNameNotFound
+            If the package wasn't found.
+
+        Examples
+        --------
+        >>> dbs.get_reducto_report('click')
+        {'click': {'average_function_length': 11, 'blank_lines': 1518,...
+        'comment_lines': 496, 'docstring_lines': 1479, 'lines': 9918,...
+        'number_of_functions': 469, 'source_files': 17, 'source_lines': 6425}}
+        """
+        for pkg in self.reducto_status_table.all():
+            if name in pkg.keys():
+                return pkg
+
+        raise rp.PackageNameNotFound(name)
