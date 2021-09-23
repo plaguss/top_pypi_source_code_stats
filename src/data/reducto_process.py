@@ -106,10 +106,19 @@ def distribution_candidates() -> List[pathlib.Path]:
                 if not src_.SourceFile.validate(path):
                     candidates.append(path)
             except src_.SourceFileError as e:
-                pass
-
-        except Exception as exc:
-            logger.warning('No packages where found')
+                # One last attempt in case an inner package like in google-auth is found:
+                # See package definition for:
+                # https://pypi.org/project/google-auth/
+                if path.is_dir():
+                    for subpath in path.iterdir():
+                        try:
+                            if not pkg.Package.validate(subpath):
+                                candidates.append(subpath)
+                        except pkg.PackageError:
+                            pass
+        #
+        # except Exception as exc:
+        #     logger.warning('No packages where found')
 
     return candidates
 
