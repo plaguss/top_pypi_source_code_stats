@@ -189,4 +189,7 @@ class DBStore:
         """Returns the packages that failed to be processed.
         Those packages with false in reducto_status_table.
         """
-        return [k for pkg in self.reducto_status_table.all() for k, v in pkg.items()]
+        return [
+            k for pkg in self.reducto_status_table.all() for k, v in pkg.items()
+            if v is False
+        ]
