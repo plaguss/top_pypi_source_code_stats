@@ -2,7 +2,10 @@
 
 """
 
-from typing import Dict
+from typing import (
+    Dict,
+    List
+)
 
 import tinydb
 from tinydb import TinyDB
@@ -11,23 +14,7 @@ import src.constants as cte
 import src.data.reducto_process as rp
 
 Report = Dict[str, Dict[str, int]]
-# DB_PATH = pathlib.Path('.').resolve() / 'data' / 'processed' / 'db.json'
 
-# db = TinyDB(DB_PATH, sort_keys=True, indent=4)
-#
-# reducto_reports_table = db.table('reducto_reports')
-
-
-# db.insert({'type': 'peach', 'count': 3})
-# db.insert({'type': 'apple', 'count': 2})
-#
-#
-# TABLE_DOWNLOADS = 'downloads'
-# Fruit = Query()
-# db.search(Fruit.type == 'peach')
-
-# downloads = db.table(TABLE_DOWNLOADS)
-# name, path = download.get_package('click', download.PACKAGES_DIRECTORY)  #
 # downloads.insert({'package': result[0]})
 # package_info = {
 #     'pypi_package': 'PATH_TO_ORIGINAL_PACKAGE',
@@ -37,12 +24,6 @@ Report = Dict[str, Dict[str, int]]
 #     'reducto_stats': 'REDUCTO_EXECUTED_ON_REDUCTO_TARGET',
 #     'libraries': 'OBTAINED_FROM_PYBRARIES'
 # }
-
-# example = {
-#     'package_name_1': 'package_info_1',  # Obtained
-#     'package_name_2': 'package_info_2',
-# }
-
 
 
 class DBStore:
@@ -194,3 +175,9 @@ class DBStore:
                 return pkg
 
         raise rp.PackageNameNotFound(name)
+
+    def get_failed_packages(self) -> List[str]:
+        """Returns the packages that failed to be processed.
+        Those packages with false in reducto_status_table.
+        """
+        return [k for pkg in self.reducto_status_table.all() for k, v in pkg.items()]
