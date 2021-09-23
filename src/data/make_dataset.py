@@ -20,23 +20,62 @@ import logging
 from pathlib import Path
 # from dotenv import find_dotenv, load_dotenv
 from time import time
-from mpire import WorkerPool
 from os import cpu_count
 from functools import partial
+
+from mpire import WorkerPool
+import tqdm
 
 import src.data.download as dwn
 import src.constants as cte
 import src.data.reducto_process as rp
 import src.data.db as db
 
+LOGFILE = 'reducto2.log'  # filename for the logs
+
 log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-logging.basicConfig(level=logging.INFO, format=log_fmt)
+logging.basicConfig(
+    filename=str(cte.DATA_FOLDER / LOGFILE),
+    level=logging.INFO,
+    format=log_fmt
+)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
 workers = cpu_count() - 1
+
+
+def update_dict_key(dictionary: db.Report, key: str) -> db.Report:
+    """Function to update the package name of a report.
+
+    Some google packages have misleading package names, for example
+    protobuf or google-auth. Use this function to keep the original name
+    when inserting to db.
+
+    Parameters
+    ----------
+    dictionary : db.Report
+        Report obtained from reducto.
+    key : str
+        Name to update the package.
+
+    Returns
+    -------
+    updated : db.Report
+        Updates the key in the report.
+
+    Examples
+    --------
+    >>> report = {'auth': {'lines': 9346, 'number_of_functions': 309...}}
+    >>> update_dict_key(report, 'google_auth')
+    {'google_auth': {'lines': 9346, 'number_of_functions': 309...}}
+    """
+    old_key: str = [k for k in dictionary.keys()][0]
+    dictionary[key] = dictionary[old_key]
+    del(dictionary[old_key])
+    return dictionary
 
 
 @click.group()
@@ -78,7 +117,8 @@ def reducto_reports(start: int = 0, stop: int = -1):
     subset = packages[start:stop]  # Maybe extract to a small list.
 
     # Fails to run in parallel, just run it for the moment...
-    for pkg in subset:
+    for pkg in tqdm.tqdm(subset):
+        print(f'extract reducto: {pkg}')
         extract_reducto(pkg, dbs)
 
     # partial_reducto = partial(extract_reducto, database=dbs)
@@ -100,38 +140,43 @@ def extract_reducto(pkg: str = None, database: db.DBStore = None) -> None:
     """
     try:
         check = database.get_reducto_status(pkg)
-        if check:
+        if check[pkg]:
             logger.info(f"Skipping, package already downloaded: {pkg}.")
+            return
         else:
-            logger.info(f"Skipping, errored package, needs review: {pkg}.")
+            logger.info(f"Errored package, needs review: {pkg}.")
     except rp.PackageNameNotFound:
         # Package not downloaded, keep going.
         pass
 
-    # 1) Download the package
-    pkg_path: pathlib.Path = dwn.download_and_extract(pkg, cte.RAW)
-    # 2) Install it
+    # Install directly using pip:
     try:
-        try:
-            rp.install(pkg_path)
-        except Exception as exc:
-            # Installing from the download failed, install directly from pypi.
-            rp.install(pkg)
-        finally:
-            rp.clean_folder(cte.RAW)
+        rp.install(pkg)
+        rp.clean_folder(cte.RAW)
         logger.info(f"{pkg} installed.")
 
     except Exception as exc:
         # TODO: Register to db
-        logger.error(f"{pkg_path} could not be installed due to: {exc}.")
+        logger.error(f"{pkg} could not be installed due to: {exc}.", exc_info=True)
+        database.insert_reducto_status({pkg: False})
+        return
 
     # 3) find the package to be passed to reducto.
     target = None
     try:
-        target: pathlib.Path = rp.find_package(pkg)
-    except rp.PackageNameNotFound:
-        # TODO: Register to db
-        logger.error(f"{pkg} could not be found.")
+        try:
+            target: pathlib.Path = rp.find_package(pkg)
+        except rp.PackageNameNotFound:
+            logger.info(
+                f"find_packages failed on: {pkg} try with distribution_candidates."
+            )
+            target: pathlib.Path = rp.distribution_candidates()[0]
+    except IndexError:
+        logger.error(
+            f"{pkg} could not be found, on find_package or distribution_candidates",
+            exc_info=True
+        )
+        database.insert_reducto_status({pkg: False})
         return
 
     # 4) Run reducto on it.
@@ -145,17 +190,22 @@ def extract_reducto(pkg: str = None, database: db.DBStore = None) -> None:
             logger.info(f"Reducto run on: {pkg}.")
         except rp.PackageNameNotFound:
             # TODO: Register to db
-            logger.error(f"{pkg} could not be found.")
+            logger.error(f"{pkg} could not be found, running reducto.", exc_info=True)
+            database.insert_reducto_status({pkg: False})
+            return
+        except Exception as exc:
+            logger.error(f"reducto failed on: {pkg}, error: {exc}", exc_info=True)
+            database.insert_reducto_status({pkg: False})
             return
     else:
         database.insert_reducto_status({pkg: False})
-        logger.error(f"find_package failed on {pkg} .")
+        logger.error(f"find_package failed on {pkg} .", exc_info=True)
         return
 
     # 5) Read report:
     report: db.Report = rp.read_reducto_report(target.stem)
-    # report: db.Report = rp.read_reducto_report(pkg)
     # 6) Insert to db.
+    report = update_dict_key(report, pkg)
     database.insert_reducto_report(report)
     # 7) Clean folders after.
     rp.clean_folder(cte.REDUCTO_REPORTS)
