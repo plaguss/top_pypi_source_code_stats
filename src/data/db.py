@@ -176,6 +176,15 @@ class DBStore:
 
         raise rp.PackageNameNotFound(name)
 
+    def status_duplicates(self) -> List[str]:
+        """Returns the names of the packages with duplicated registers. """
+        from collections import Counter
+        # Get a Counter of the packages in status
+        ctr = Counter(
+            [k for pkg in self.reducto_status_table.all() for (k, v) in pkg.items()]
+        )
+        return [k for k, v in ctr.items() if v > 1]
+
     def get_failed_packages(self) -> List[str]:
         """Returns the packages that failed to be processed.
         Those packages with false in reducto_status_table.
