@@ -112,6 +112,7 @@ def reducto_reports(start: int = 0, stop: int = -1):
         For debugging purposes. Defaults to -1 (downloads until the last).
     """
     dbs: db.DBStore = db.DBStore()
+    new_dbs: db.DBStore = db.DBStore(cte.PROCESSED / 'db2.json')
     # Download the packages.
     packages: List[str] = dwn.get_top_packages()
     subset = packages[start:stop]  # Maybe extract to a small list.
@@ -119,14 +120,19 @@ def reducto_reports(start: int = 0, stop: int = -1):
     # Fails to run in parallel, just run it for the moment...
     for pkg in tqdm.tqdm(subset):
         print(f'extract reducto: {pkg}')
-        extract_reducto(pkg, dbs)
+        extract_reducto(pkg, dbs, new_dbs)
+
+    # TODO: Run again on the whole dataset to update the forms, then update the
+    #    Create a new log file
+    #    DBStore interface to the data, and add the timings
+    #    Let the code as initially but avoiding duplicates on insertion.
 
     # partial_reducto = partial(extract_reducto, database=dbs)
     # with WorkerPool(n_jobs=workers) as pool:
     #     results = pool.map(partial_reducto, subset, progress_bar=True)
 
 
-def extract_reducto(pkg: str = None, database: db.DBStore = None) -> None:
+def extract_reducto(pkg: str = None, database: db.DBStore = None, new_database: db.DBStore = None) -> None:
     """Extracts the reducto report of a python package.
 
     Downloads, installs, grabs the content and removes everything when finished.
@@ -138,9 +144,16 @@ def extract_reducto(pkg: str = None, database: db.DBStore = None) -> None:
     database : db.DBStore
         Instance of DBStore.
     """
+    tab_reports = new_database.db.table("reducto_reports")
+    tab_status = new_database.db.table("reducto_status")
+
     try:
         check = database.get_reducto_status(pkg)
         if check[pkg]:
+            # TODO: Remove when new db is updated
+            report = database.get_reducto_report(pkg)
+            tab_reports.insert({"name": pkg, "report": report})
+            tab_status.insert({"name": pkg, "status": True, "reason": ""})
             logger.info(f"Skipping, package already downloaded: {pkg}.")
             return
         else:
@@ -156,9 +169,10 @@ def extract_reducto(pkg: str = None, database: db.DBStore = None) -> None:
         logger.info(f"{pkg} installed.")
 
     except Exception as exc:
-        # TODO: Register to db
         logger.error(f"{pkg} could not be installed due to: {exc}.", exc_info=True)
-        database.insert_reducto_status({pkg: False})
+        # TODO: check if already inserted as False
+        # database.insert_reducto_status({pkg: False})
+        tab_status.insert({"name": pkg, "status": True, "reason": "install"})
         return
 
     # 3) find the package to be passed to reducto.
@@ -176,7 +190,10 @@ def extract_reducto(pkg: str = None, database: db.DBStore = None) -> None:
             f"{pkg} could not be found, on find_package or distribution_candidates",
             exc_info=True
         )
-        database.insert_reducto_status({pkg: False})
+        # TODO: New update, to be removed
+        # database.insert_reducto_status({pkg: False})
+        tab_status.insert({"name": pkg, "status": False, "reason": "find_package"})
+
         return
 
     # 4) Run reducto on it.
@@ -185,20 +202,24 @@ def extract_reducto(pkg: str = None, database: db.DBStore = None) -> None:
             tstart = time()
             rp.run_reducto(target)
             # Check time running
-            database.insert_reducto_timing({pkg: time() - tstart})
+            # database.insert_reducto_timing({pkg: time() - tstart})
             rp.clean_folder(cte.DISTRIBUTIONS)
             logger.info(f"Reducto run on: {pkg}.")
         except rp.PackageNameNotFound:
             # TODO: Register to db
             logger.error(f"{pkg} could not be found, running reducto.", exc_info=True)
-            database.insert_reducto_status({pkg: False})
+            tab_status.insert({"name": pkg, "status": False, "reason": "reducto_name"})
+            # database.insert_reducto_status({pkg: False})
             return
         except Exception as exc:
             logger.error(f"reducto failed on: {pkg}, error: {exc}", exc_info=True)
-            database.insert_reducto_status({pkg: False})
+            tab_status.insert({"name": pkg, "status": False, "reason": "reducto_error"})
+            # database.insert_reducto_status({pkg: False})
             return
     else:
-        database.insert_reducto_status({pkg: False})
+        # TODO: Remove when updated
+        # database.insert_reducto_status({pkg: False})
+        tab_status.insert({"name": pkg, "status": False, "reason": "find_package"})
         logger.error(f"find_package failed on {pkg} .", exc_info=True)
         return
 

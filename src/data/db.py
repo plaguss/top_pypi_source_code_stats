@@ -1,7 +1,7 @@
 """Deal with data content.
 
 """
-
+import pathlib
 from typing import (
     Dict,
     List
@@ -15,15 +15,19 @@ import src.data.reducto_process as rp
 
 Report = Dict[str, Dict[str, int]]
 
-# downloads.insert({'package': result[0]})
-# package_info = {
-#     'pypi_package': 'PATH_TO_ORIGINAL_PACKAGE',
-#     'reducto_target': 'FIND_PATH_TO_SOURCE',  # Create helper function
-#     'version': 'PATH_TO_ORIGINAL_PACKAGE',
-#     'processed': 'BOOL',  # Whether the package is already processed or not. Remove when done
-#     'reducto_stats': 'REDUCTO_EXECUTED_ON_REDUCTO_TARGET',
-#     'libraries': 'OBTAINED_FROM_PYBRARIES'
-# }
+
+# TODO: Reminders
+# Recreate db:
+table_status = {
+    "name": "pkg",
+    "status": bool,
+    "reason": "Failure or ''"
+}
+
+table_reports = {
+    "name": "pkg",
+    "report": "reducto_report"
+}
 
 
 class DBStore:
@@ -34,8 +38,14 @@ class DBStore:
     --------
     >>> dbs = DBStore()
     """
-    def __init__(self):
-        self._db = TinyDB(cte.DB_PATH, sort_keys=True, indent=4)
+    def __init__(self, dbpath: pathlib.Path = cte.DB_PATH):
+        """
+        Parameters
+        ----------
+        dbpath : pathlib.Path
+            path pointing to json file.
+        """
+        self._db = TinyDB(dbpath, sort_keys=True, indent=4)
 
     def __repr__(self):
         return type(self).__name__ + f"({self._db})"
