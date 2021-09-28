@@ -8,6 +8,13 @@ TODO:
     - Ensure unnecesary data is cleaned after.
     - Store the total time of the process in the database.
 
+Status:
+    - 3999 packages
+    - failed 350, reasons:
+        - find_package: 150
+        - install: 123
+        - reducto: 77
+
 """
 
 # -*- coding: utf-8 -*-
@@ -25,13 +32,14 @@ from functools import partial
 
 from mpire import WorkerPool
 import tqdm
+from tinydb import Query
 
 import src.data.download as dwn
 import src.constants as cte
 import src.data.reducto_process as rp
 import src.data.db as db
 
-LOGFILE = 'reducto2.log'  # filename for the logs
+LOGFILE = 'reducto3.log'  # filename for the logs
 
 log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 logging.basicConfig(
@@ -112,7 +120,6 @@ def reducto_reports(start: int = 0, stop: int = -1):
         For debugging purposes. Defaults to -1 (downloads until the last).
     """
     dbs: db.DBStore = db.DBStore()
-    new_dbs: db.DBStore = db.DBStore(cte.PROCESSED / 'db2.json')
     # Download the packages.
     packages: List[str] = dwn.get_top_packages()
     subset = packages[start:stop]  # Maybe extract to a small list.
@@ -120,19 +127,14 @@ def reducto_reports(start: int = 0, stop: int = -1):
     # Fails to run in parallel, just run it for the moment...
     for pkg in tqdm.tqdm(subset):
         print(f'extract reducto: {pkg}')
-        extract_reducto(pkg, dbs, new_dbs)
-
-    # TODO: Run again on the whole dataset to update the forms, then update the
-    #    Create a new log file
-    #    DBStore interface to the data, and add the timings
-    #    Let the code as initially but avoiding duplicates on insertion.
+        extract_reducto(pkg, dbs)
 
     # partial_reducto = partial(extract_reducto, database=dbs)
     # with WorkerPool(n_jobs=workers) as pool:
     #     results = pool.map(partial_reducto, subset, progress_bar=True)
 
 
-def extract_reducto(pkg: str = None, database: db.DBStore = None, new_database: db.DBStore = None) -> None:
+def extract_reducto(pkg: str = None, database: db.DBStore = None) -> None:
     """Extracts the reducto report of a python package.
 
     Downloads, installs, grabs the content and removes everything when finished.
@@ -144,16 +146,12 @@ def extract_reducto(pkg: str = None, database: db.DBStore = None, new_database: 
     database : db.DBStore
         Instance of DBStore.
     """
-    tab_reports = new_database.db.table("reducto_reports")
-    tab_status = new_database.db.table("reducto_status")
-
     try:
         check = database.get_reducto_status(pkg)
         if check[pkg]:
-            # TODO: Remove when new db is updated
             report = database.get_reducto_report(pkg)
-            tab_reports.insert({"name": pkg, "report": report})
-            tab_status.insert({"name": pkg, "status": True, "reason": ""})
+            database.insert_reducto_report(pkg,report)
+            database.insert_reducto_status(pkg, True, "")
             logger.info(f"Skipping, package already downloaded: {pkg}.")
             return
         else:
@@ -171,8 +169,7 @@ def extract_reducto(pkg: str = None, database: db.DBStore = None, new_database: 
     except Exception as exc:
         logger.error(f"{pkg} could not be installed due to: {exc}.", exc_info=True)
         # TODO: check if already inserted as False
-        # database.insert_reducto_status({pkg: False})
-        tab_status.insert({"name": pkg, "status": True, "reason": "install"})
+        database.insert_reducto_status(pkg, True, "install")
         return
 
     # 3) find the package to be passed to reducto.
@@ -190,9 +187,7 @@ def extract_reducto(pkg: str = None, database: db.DBStore = None, new_database: 
             f"{pkg} could not be found, on find_package or distribution_candidates",
             exc_info=True
         )
-        # TODO: New update, to be removed
-        # database.insert_reducto_status({pkg: False})
-        tab_status.insert({"name": pkg, "status": False, "reason": "find_package"})
+        database.insert_reducto_status(pkg, False, "find_package")
 
         return
 
@@ -202,24 +197,20 @@ def extract_reducto(pkg: str = None, database: db.DBStore = None, new_database: 
             tstart = time()
             rp.run_reducto(target)
             # Check time running
-            # database.insert_reducto_timing({pkg: time() - tstart})
+            database.insert_reducto_timing(pkg, time() - tstart)
             rp.clean_folder(cte.DISTRIBUTIONS)
             logger.info(f"Reducto run on: {pkg}.")
         except rp.PackageNameNotFound:
             # TODO: Register to db
             logger.error(f"{pkg} could not be found, running reducto.", exc_info=True)
-            tab_status.insert({"name": pkg, "status": False, "reason": "reducto_name"})
-            # database.insert_reducto_status({pkg: False})
+            database.insert_reducto_status(pkg, False, "reducto_name")
             return
         except Exception as exc:
             logger.error(f"reducto failed on: {pkg}, error: {exc}", exc_info=True)
-            tab_status.insert({"name": pkg, "status": False, "reason": "reducto_error"})
-            # database.insert_reducto_status({pkg: False})
+            database.insert_reducto_status(pkg, False, "reducto_error")
             return
     else:
-        # TODO: Remove when updated
-        # database.insert_reducto_status({pkg: False})
-        tab_status.insert({"name": pkg, "status": False, "reason": "find_package"})
+        database.insert_reducto_status(pkg, False, "find_package")
         logger.error(f"find_package failed on {pkg} .", exc_info=True)
         return
 
@@ -227,12 +218,12 @@ def extract_reducto(pkg: str = None, database: db.DBStore = None, new_database: 
     report: db.Report = rp.read_reducto_report(target.stem)
     # 6) Insert to db.
     report = update_dict_key(report, pkg)
-    database.insert_reducto_report(report)
+    database.insert_reducto_report(pkg, report)
     # 7) Clean folders after.
     rp.clean_folder(cte.REDUCTO_REPORTS)
 
     # 8) Insert status
-    database.insert_reducto_status({pkg: True})
+    database.insert_reducto_status(pkg, True, "")
 
     logger.info(f"Process finished: {pkg}.")
 
