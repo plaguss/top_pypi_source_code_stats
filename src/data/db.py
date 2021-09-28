@@ -4,30 +4,18 @@
 import pathlib
 from typing import (
     Dict,
-    List
+    List,
+    Optional,
+    Union
 )
 
 import tinydb
-from tinydb import TinyDB
+from tinydb import TinyDB, Query
 
 import src.constants as cte
 import src.data.reducto_process as rp
 
 Report = Dict[str, Dict[str, int]]
-
-
-# TODO: Reminders
-# Recreate db:
-table_status = {
-    "name": "pkg",
-    "status": bool,
-    "reason": "Failure or ''"
-}
-
-table_reports = {
-    "name": "pkg",
-    "report": "reducto_report"
-}
 
 
 class DBStore:
@@ -93,11 +81,13 @@ class DBStore:
         self.reducto_status_table.insert({"name": name, "report": report})
         # self.reducto_reports_table.insert(report)
 
-    def insert_reducto_timing(self, timing: Dict[str, float]) -> None:
+    def insert_reducto_timing(self, name: str, timing: float) -> None:
         """Insert a register in the corresponding table.
 
         Parameters
         ----------
+        name : str
+            Name of the package.
         timing : float
             Dict with package name and seconds elapsed during the process.
 
@@ -106,25 +96,40 @@ class DBStore:
         >>> import src.data.reducto_process as rp
         >>> dbs.insert_reducto_reports({'click': 2.1})
         """
-        self.reducto_timing_table.insert(timing)
+        self.reducto_timing_table.insert({"name": name, "time": timing})
 
-    def insert_reducto_status(self, status: Dict[str, bool]) -> None:
+    def insert_reducto_status(self, name: str, status: bool, reason: str) -> None:
         """Insert a register in the corresponding table.
 
         Parameters
         ----------
-        status : Dict[str, str]
-            {'click': True}, the package worked properly.
-            {'click': False}, something failed.
+        name : str
+            Name of the package.
+        status : bool
+            Boolean determining whether the processing was correct (True), or failed
+            (False)
+        reason : str
+            Reason if the failure, if any.
+            When no failure ocurred (status is True), the reason is written as "",
+            in case of failure, the reasons may be one of the following detected:
+            'reducto_error', 'find_package', 'install'
 
         Examples
         --------
         >>> import src.data.reducto_process as rp
-        >>> dbs.insert_reducto_status({'click': 2.1})
+        >>> dbs.insert_reducto_status({'name': 'click', 'status': True, 'reason': ''})
+        >>> dbs.insert_reducto_status({'name': 'futures', 'status': False, 'reason': ''})
         """
-        self.reducto_status_table.insert(status)
+        status_report = {
+            "name": name,
+            "status": status,
+            "reason": reason
+        }
 
-    def get_reducto_report(self, name: str) -> Report:
+        self.reducto_status_table.insert(status_report)
+        # self.reducto_status_table.insert(status)
+
+    def get_reducto_report(self, name: str) -> Optional[Report]:
         """Obtain the report of a package if already inserted.
 
         Loops through the reducto reports table checking for the name and returns the
@@ -137,12 +142,8 @@ class DBStore:
 
         Returns
         -------
-        report : Report
-
-        Raises
-        ------
-        rp.PackageNameNotFound
-            If the package wasn't found.
+        report : Report or None
+            Report if found
 
         Examples
         --------
@@ -151,11 +152,16 @@ class DBStore:
         'comment_lines': 496, 'docstring_lines': 1479, 'lines': 9918,...
         'number_of_functions': 469, 'source_files': 17, 'source_lines': 6425}}
         """
-        for pkg in self.reducto_reports_table.all():
-            if name in pkg.keys():
-                return pkg
-
-        raise rp.PackageNameNotFound(name)
+        query = self.reducto_reports_table.search(Query().name == name)
+        if len(query) > 0:
+            return query[0]
+        else:
+            return
+        # for pkg in self.reducto_reports_table.all():
+        #     if name in pkg.keys():
+        #         return pkg
+        #
+        # raise rp.PackageNameNotFound(name)
 
     def get_reducto_status(self, name: str) -> Report:
         """Obtain the status of a package if already inserted.
@@ -178,31 +184,22 @@ class DBStore:
 
         Examples
         --------
-        >>> dbs.get_reducto_report('click')
-        {'click': {'average_function_length': 11, 'blank_lines': 1518,...
-        'comment_lines': 496, 'docstring_lines': 1479, 'lines': 9918,...
-        'number_of_functions': 469, 'source_files': 17, 'source_lines': 6425}}
+        >>> dbs.get_reducto_status('click')
+        {'name': 'click', 'reason': '', 'status': True}
         """
-        for pkg in self.reducto_status_table.all():
-            if name in pkg.keys():
-                return pkg
+        query = self.reducto_status_table.search(Query().name == name)
+        if len(query) > 0:
+            return query[0]
+        else:
+            return
+        # for pkg in self.reducto_status_table.all():
+        #     if name in pkg.keys():
+        #         return pkg
+        #
+        # raise rp.PackageNameNotFound(name)
 
-        raise rp.PackageNameNotFound(name)
-
-    def status_duplicates(self) -> List[str]:
-        """Returns the names of the packages with duplicated registers. """
-        from collections import Counter
-        # Get a Counter of the packages in status
-        ctr = Counter(
-            [k for pkg in self.reducto_status_table.all() for (k, v) in pkg.items()]
-        )
-        return [k for k, v in ctr.items() if v > 1]
-
-    def get_failed_packages(self) -> List[str]:
+    def get_failed_packages(self) -> List[Dict[str, Union[str, bool]]]:
         """Returns the packages that failed to be processed.
         Those packages with false in reducto_status_table.
         """
-        return [
-            k for pkg in self.reducto_status_table.all() for k, v in pkg.items()
-            if v is False
-        ]
+        return self.reducto_reports_table.search(Query().status == False)
