@@ -22,16 +22,15 @@ from typing import List
 
 import pathlib
 
-import click
 import logging
 from pathlib import Path
 # from dotenv import find_dotenv, load_dotenv
 from time import time
 from os import cpu_count
-from functools import partial
 
-from mpire import WorkerPool
 import tqdm
+import click
+import pandas as pd
 from tinydb import Query
 
 import src.data.download as dwn
@@ -226,6 +225,35 @@ def extract_reducto(pkg: str = None, database: db.DBStore = None) -> None:
     database.insert_reducto_status(pkg, True, "")
 
     logger.info(f"Process finished: {pkg}.")
+
+
+@make_dataset.command()
+@click.option(
+    '--output_filename',
+    default=cte.PROCESSED / 'reducto_reports.csv',
+    show_default=True,
+    help='Path to write the file'
+)
+def reducto_table(output_filename: pathlib.Path = cte.PROCESSED / 'reducto_reports.csv'):
+    """Creates a csv representing the table of reducto reports. """
+    dbs: db.DBStore = db.DBStore()
+    table_dict = {}
+    columns = [
+        'lines', 'source_lines', 'blank_lines', 'docstring_lines', 'comment_lines',
+        'average_function_length', 'number_of_functions', 'source_files'
+    ]
+    for report in dbs.reducto_reports_table.all():
+        name = report["name"]
+        if name == 'filelock' or name == 'recordclass':
+            # FIXME: These packages failed to obtain the report, must be checked
+            pass
+        else:
+            values = list(report["report"].values())
+            # If a package has no source_files, write one by default, is a single script
+            table_dict[name] = [val.get(col, 1) for col in columns for val in values]
+
+    table = pd.DataFrame.from_dict(table_dict, orient='index', columns=columns)
+    table.to_csv(output_filename)
 
 
 @click.command()
