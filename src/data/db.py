@@ -74,11 +74,13 @@ class DBStore:
         """
         return self.db.table('reducto_status')
 
-    def insert_reducto_report(self, report: Report) -> None:
+    def insert_reducto_report(self, name: str, report: Report) -> None:
         """Insert a register in the corresponding table.
 
         Parameters
         ----------
+        name : str
+            Name of the package. For easy querying.
         report : dict
             Reducto report.
 
@@ -86,9 +88,10 @@ class DBStore:
         --------
         >>> import src.data.reducto_process as rp
         >>> report = rp.read_reducto_report('click')
-        >>> dbs.insert_reducto_reports(report)
+        >>> dbs.insert_reducto_reports('click', report)
         """
-        self.reducto_reports_table.insert(report)
+        self.reducto_status_table.insert({"name": name, "report": report})
+        # self.reducto_reports_table.insert(report)
 
     def insert_reducto_timing(self, timing: Dict[str, float]) -> None:
         """Insert a register in the corresponding table.
