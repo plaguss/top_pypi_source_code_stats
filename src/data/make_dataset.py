@@ -31,7 +31,6 @@ from os import cpu_count
 import tqdm
 import click
 import pandas as pd
-from tinydb import Query
 
 import src.data.download as dwn
 import src.constants as cte
