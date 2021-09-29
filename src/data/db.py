@@ -13,7 +13,6 @@ import tinydb
 from tinydb import TinyDB, Query
 
 import src.constants as cte
-import src.data.reducto_process as rp
 
 Report = Dict[str, Dict[str, int]]
 
@@ -79,7 +78,6 @@ class DBStore:
         >>> dbs.insert_reducto_reports('click', report)
         """
         self.reducto_status_table.insert({"name": name, "report": report})
-        # self.reducto_reports_table.insert(report)
 
     def insert_reducto_timing(self, name: str, timing: float) -> None:
         """Insert a register in the corresponding table.
@@ -127,7 +125,6 @@ class DBStore:
         }
 
         self.reducto_status_table.insert(status_report)
-        # self.reducto_status_table.insert(status)
 
     def get_reducto_report(self, name: str) -> Optional[Report]:
         """Obtain the report of a package if already inserted.
@@ -157,11 +154,6 @@ class DBStore:
             return query[0]
         else:
             return
-        # for pkg in self.reducto_reports_table.all():
-        #     if name in pkg.keys():
-        #         return pkg
-        #
-        # raise rp.PackageNameNotFound(name)
 
     def get_reducto_status(self, name: str) -> Report:
         """Obtain the status of a package if already inserted.
@@ -192,14 +184,28 @@ class DBStore:
             return query[0]
         else:
             return
-        # for pkg in self.reducto_status_table.all():
-        #     if name in pkg.keys():
-        #         return pkg
-        #
-        # raise rp.PackageNameNotFound(name)
 
     def get_failed_packages(self) -> List[Dict[str, Union[str, bool]]]:
         """Returns the packages that failed to be processed.
         Those packages with false in reducto_status_table.
         """
         return self.reducto_reports_table.search(Query().status == False)
+
+
+class DBLibraries:
+    def __init__(self, dbpath: pathlib.Path = cte.DB_LIBRARIES_PATH):
+        """
+        Parameters
+        ----------
+        dbpath : pathlib.Path
+            path pointing to json file.
+        """
+        self._db = TinyDB(dbpath, sort_keys=True, indent=4)
+
+    def __repr__(self):
+        return type(self).__name__ + f"({self._db})"
+
+    @property
+    def db(self) -> TinyDB:
+        return self._db
+
