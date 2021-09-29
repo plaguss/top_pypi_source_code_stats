@@ -12,8 +12,10 @@ REDUCTO_REPORTS: pathlib.Path = INTERIM / 'reducto_reports'
 PROCESSED: pathlib.Path = DATA_FOLDER / 'processed'
 RAW: pathlib.Path = DATA_FOLDER / 'raw'
 
-# Database path
+# Database path for reducto
 DB_PATH: pathlib.Path = PROCESSED / 'db.json'
+# Database path for libraries.io info
+DB_LIBRARIES_PATH: pathlib.Path = PROCESSED / 'db_libraries.json'
 
 # Reducto table
 REDUCTO_TABLE = pathlib.Path = PROCESSED / 'reducto_reports.csv'
