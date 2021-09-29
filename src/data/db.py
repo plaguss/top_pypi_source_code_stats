@@ -209,3 +209,55 @@ class DBLibraries:
     def db(self) -> TinyDB:
         return self._db
 
+    @property
+    def sourcerank_table(self) -> tinydb.database.Table:
+        """Returns the table corresponding to sourcerank extraction from pybraries. """
+        return self.db.table('sourcerank')
+
+    @property
+    def stars_contributors_table(self) -> tinydb.database.Table:
+        """Returns the table corresponding stars and contributors per project. """
+        return self.db.table('stars_contributors')
+
+    def insert_sourcerank(self, name: str, sourcerank: Dict[str, int]) -> None:
+        """Insert a register in the corresponding table.
+
+        Parameters
+        ----------
+        name : str
+            Name of the package.
+        sourcerank : Dict[str, int]
+            Extraction from pybraries of sourcerank data.
+
+        Examples
+        --------
+        """
+        report = {
+            "name": name,
+            "sourcerank": sourcerank
+        }
+
+        self.sourcerank_table.insert(report)
+
+    def insert_stars_contributors(self, name: str, stars: int, contributors: int) -> None:
+        """Insert a register in the corresponding table.
+
+        Parameters
+        ----------
+        name : str
+            Name of the package.
+        stars : int
+            Stars given to a project in pypi.
+        contributors : int
+            Total number of contributors to the project.
+
+        Examples
+        --------
+        """
+        report = {
+            "name": name,
+            "stars": stars,
+            "contributors": contributors
+        }
+
+        self.stars_contributors_table.insert(report)
