@@ -15,12 +15,15 @@ from typing import Generator, List, Literal, Optional, Tuple, Union, cast, Dict
 from urllib.request import Request, urlopen, urlretrieve
 import pathlib
 
+import src.constants as cte
+
+
 PYPI_INSTANCE = "https://pypi.org/pypi"
 PYPI_TOP_PACKAGES = "https://hugovk.github.io/top-pypi-packages/top-pypi-packages-{days}-days.json"
-PYPI_TOP_PACKAGES_LOCAL = str(
-    pathlib.Path.cwd() / 'data' / 'external' / 'top-pypi-packages-365-days.json'
-)
-PACKAGES_DIRECTORY = pathlib.Path.cwd() / 'data' / 'raw'
+# PYPI_TOP_PACKAGES_LOCAL = str(
+#     pathlib.Path.cwd() / 'data' / 'external' / 'top-pypi-packages-365-days.json'
+# )
+PYPI_TOP_PACKAGES_LOCAL = str(cte.EXTERNAL / 'top-pypi-packages-365-days.json')
 
 ArchiveKind = Union[tarfile.TarFile, zipfile.ZipFile]
 Days = Union[Literal[30], Literal[365]]
@@ -144,7 +147,7 @@ def get_top_packages(days: Optional[Days] = None, local: bool = True) -> List[st
 
 
 def get_downloads_per_package(
-        days: Optional[Days] = None, local: bool = True
+        days: Optional[Days] = None, local: bool = True, guide: List[str] = None
 ) -> Dict[str, int]:
     """Modified function to allow using local file instead of the original repository.
 
@@ -152,6 +155,7 @@ def get_downloads_per_package(
     ----------
     days
     local
+    guide
 
     Returns
     -------
@@ -161,7 +165,7 @@ def get_downloads_per_package(
     Examples
     --------
     >>> get_top_packages_and_downloads()
-    [{'urllib3'}, 'six', 'botocore', 'setuptools', 'requests',...
+    {'urllib3': 30214908...}
     """
     if not local:  # original function
         with urlopen(PYPI_TOP_PACKAGES.format(days=days)) as page:
@@ -170,7 +174,17 @@ def get_downloads_per_package(
         with open(PYPI_TOP_PACKAGES_LOCAL, 'r') as f:
             result = json.load(f)
 
-    return {package['project']: package['download_count'] for package in result["rows"]}
+    if isinstance(guide, list):
+        downloads = {
+            package['project']: package['download_count'] for package in result["rows"]
+            if package['project'] in guide
+        }
+    else:
+        downloads = {
+            package['project']: package['download_count'] for package in result["rows"]
+        }
+
+    return downloads
 
 
 def dump_config(directory: Path, values: List[str]):
