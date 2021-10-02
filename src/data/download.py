@@ -11,7 +11,7 @@ from argparse import ArgumentParser
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from pathlib import Path
-from typing import Generator, List, Literal, Optional, Tuple, Union, cast
+from typing import Generator, List, Literal, Optional, Tuple, Union, cast, Dict
 from urllib.request import Request, urlopen, urlretrieve
 import pathlib
 
@@ -106,9 +106,7 @@ def download_and_extract(
     return directory / result_dir
 
 
-def get_package(
-    package: str, directory: Path, version: Optional[str] = None
-) -> Tuple[str, Optional[Path]]:
+def get_package(package: str, directory: Path, version: Optional[str] = None):
     try:
         return package, download_and_extract(package, directory, version)
     except Exception as e:
@@ -145,6 +143,36 @@ def get_top_packages(days: Optional[Days] = None, local: bool = True) -> List[st
     return [package["project"] for package in result["rows"]]
 
 
+def get_downloads_per_package(
+        days: Optional[Days] = None, local: bool = True
+) -> Dict[str, int]:
+    """Modified function to allow using local file instead of the original repository.
+
+    Parameters
+    ----------
+    days
+    local
+
+    Returns
+    -------
+    packages : List[str]
+        List of packages.
+
+    Examples
+    --------
+    >>> get_top_packages_and_downloads()
+    [{'urllib3'}, 'six', 'botocore', 'setuptools', 'requests',...
+    """
+    if not local:  # original function
+        with urlopen(PYPI_TOP_PACKAGES.format(days=days)) as page:
+            result = json.load(page)
+    else:
+        with open(PYPI_TOP_PACKAGES_LOCAL, 'r') as f:
+            result = json.load(f)
+
+    return {package['project']: package['download_count'] for package in result["rows"]}
+
+
 def dump_config(directory: Path, values: List[str]):
     with open(directory / "info.json", "w") as f:
         json.dump(values, f)
@@ -171,7 +199,7 @@ def download_top_packages(
     days: Days = 365,
     workers: int = 24,
     limit: slice = slice(None),
-) -> Generator[Path, None, None]:
+):
     assert directory.exists()
     if not (directory / "info.json").exists():
         dump_config(directory, [])
