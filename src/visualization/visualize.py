@@ -37,8 +37,8 @@ def plot_average_function_length():
         axes[i].set_title(col)
 
 
-def plot_pcs():
-    data = bf.get_pc(bf.get_reducto_reports_relative())
+def plot_pcs(log: bool = False):
+    data = bf.get_pc(bf.get_reducto_reports_relative(log=log))
     sns.scatterplot(data=data, x='PC1', y='PC2')
 
 
