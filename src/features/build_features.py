@@ -1,11 +1,15 @@
 """
 """
 
+from typing import Optional, Dict
+
 import pandas as pd
+import numpy as np
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 
 import src.constants as cte
+import src.data.download as dwn
 
 
 def get_reducto_reports_table() -> pd.DataFrame:
@@ -36,20 +40,30 @@ def get_reducto_reports_table_no_outliers() -> pd.DataFrame:
     idx2 = table['average_function_length'] < table['average_function_length'].std() * n_std
     idx3 = table['number_of_functions'] < table['number_of_functions'].std() * n_std
     idx4 = table['source_files'] < table['source_files'].std() * n_std
+    idx5 = table['lines'] > 0  # Remove packages with 1 or less lines
+    idx6 = table['source_files'] > 0  # Remove packages with 1 or less lines
+    idx7 = table['number_of_functions'] > 0  # Remove packages with 1 or less lines
+    idx8 = table['average_function_length'] > 0  # Remove packages with 1 or less lines
 
     # Remove rows with more than 6 std in any column
-    no_outliers = table[idx1 * idx2 * idx3 * idx4]
+    no_outliers = table[idx1 * idx2 * idx3 * idx4 * idx5 * idx6 * idx7 * idx8]
 
     return no_outliers
 
 
-def get_reducto_reports_relative() -> pd.DataFrame:
+def get_reducto_reports_relative(log: bool = False) -> pd.DataFrame:
     """From the table without outliers, returns the number of lines as a percentage of
     the total number of lines (for the variables
 
+    Parameters
+    ----------
+    log : bool
+        If log is True, applies logarithm to the columns lines, number_of_functions and
+        source_files.
+
     Returns
     -------
-
+    data : pd.DataFrame
     """
     no_outliers = get_reducto_reports_table_no_outliers()
     total_lines = no_outliers['lines']
@@ -58,6 +72,12 @@ def get_reducto_reports_relative() -> pd.DataFrame:
             ['source_lines', 'blank_lines', 'docstring_lines', 'comment_lines']].divide(
             total_lines, axis=0
         )
+
+    if log:
+        no_outliers[['lines', 'number_of_functions', 'source_files', 'average_function_length']] = no_outliers[
+            ['lines', 'number_of_functions', 'source_files', 'average_function_length']
+        ].apply(np.log)
+
     return no_outliers
 
 
@@ -76,7 +96,7 @@ def number_of_clusters(data: pd.DataFrame):
 
     from sklearn.metrics import silhouette_samples, silhouette_score
 
-    range_n_clusters = [2, 3, 4, 5, 6, 7, 8]
+    range_n_clusters = [2, 3, 4, 5, 6]
 
     for n_clusters in range_n_clusters:
         # fig, (ax1, ax2) = plt.subplots(1, 2)
@@ -100,3 +120,30 @@ def number_of_clusters(data: pd.DataFrame):
 def kmeans_clustering(data: pd.DataFrame, clusters: int = 2):
     k_means = KMeans(n_clusters=clusters, n_init=10)
     k_means.fit(data)
+
+
+def get_downloads_per_package(data: Optional[pd.DataFrame] = None) -> pd.DataFrame:
+    """Obtain a dataframe with the downloads per package.
+
+    The index represent the package name.
+
+    Parameters
+    ----------
+    data : pd.DataFrame
+        If given, returns the subset of packages contained in the dataframe, obtained
+        from the dict.
+
+    Returns
+    -------
+    data : pd.DataFrame
+        Index contain str with the package names, and each row the total downloads.
+    """
+    downloads: Dict[str, int] = dwn.get_downloads_per_package()
+    if isinstance(data, pd.DataFrame):
+        packages = data.index
+        rows = [downloads[name] for name in packages]
+    else:
+        packages = list(downloads.keys())
+        rows = [downloads[name] for name in packages]
+
+    return pd.DataFrame(rows, index=packages, columns=['packages'])
