@@ -71,3 +71,7 @@ def plot_clusters(data: pd.DataFrame, n_clusters: int = 2) -> None:
     ax.set_xlabel('PC1')
     ax.set_ylabel('PC2')
     ax.grid(True)
+
+
+def plot_correlation(data: pd.DataFrame):
+    ax = sns.heatmap(data.corr(), annot=True, cmap="YlGnBu", linewidths=.5)
