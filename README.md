@@ -6,7 +6,8 @@ This repostory contains Python's source code statistics from top PyPI packages.
 It uses [reducto](https://pypi.org/project/reducto/) on the packages, as downloaded
 bu [top_pypi_packages](https://github.com/hugovk/top-pypi-packages/blob/master/top-pypi-packages-365-days.json)).
 
-See the analysis in the interactive notebook:
+The notebook `reducto.ipynb` contains al the analysis, or run the interactive notebook
+from Binder:
 
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/plaguss/top_pypi_source_code_stats/main?labpath=reducto.ipynb)
 
