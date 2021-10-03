@@ -16,7 +16,7 @@ def reducto_explain_downloads(
         log_y: bool = False,
         log_x: bool = True,
         drop_columns: List[str] = None
-) -> None:
+):
     """Linear regression model to explain the total number of downloads per package.
 
     Given the variables source_lines, docstring_lines, comment_lines and blank_lines
