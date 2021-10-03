@@ -22,7 +22,7 @@ def get_reducto_reports_table() -> pd.DataFrame:
     -------
     data : pd.DataFrame
     """
-    return pd.read_csv(cte.REDUCTO_TABLE, index_col=0)
+    return pd.read_csv(cte.REDUCTO_TABLE_ROOT, index_col=0)
 
 
 def get_reducto_reports_table_no_outliers() -> pd.DataFrame:
@@ -74,9 +74,6 @@ def get_reducto_reports_relative(log: bool = False) -> pd.DataFrame:
         )
 
     if log:
-        # no_outliers[['lines', 'number_of_functions', 'source_files']] = no_outliers[
-        #     ['lines', 'number_of_functions', 'source_files']
-        # ].apply(np.log)
         no_outliers[['lines', 'number_of_functions', 'source_files', 'average_function_length']] = no_outliers[
             ['lines', 'number_of_functions', 'source_files', 'average_function_length']
         ].apply(np.log)
@@ -99,12 +96,6 @@ def number_of_clusters(data: pd.DataFrame):
     range_n_clusters = [2, 3, 4, 5, 6]
 
     for n_clusters in range_n_clusters:
-        # fig, (ax1, ax2) = plt.subplots(1, 2)
-        # fig.set_size_inches(18, 7)
-        # ax1.set_xlim([-0.1, 1])
-        # The (n_clusters+1)*10 is for inserting blank space between silhouette
-        # plots of individual clusters, to demarcate them clearly.
-        # ax1.set_ylim([0, len(data) + (n_clusters + 1) * 10])
 
         clusterer = KMeans(n_clusters=n_clusters, random_state=10)
         cluster_labels = clusterer.fit_predict(data)
@@ -112,9 +103,6 @@ def number_of_clusters(data: pd.DataFrame):
         silhouette_avg = silhouette_score(data, cluster_labels)
         print("For n_clusters =", n_clusters,
               "The average silhouette_score is :", silhouette_avg)
-
-        # Compute the silhouette scores for each sample
-        sample_silhouette_values = silhouette_samples(data, cluster_labels)
 
 
 def principal_components_weights(standardize: bool = True):
@@ -127,13 +115,15 @@ def principal_components_weights(standardize: bool = True):
 
     Returns
     -------
-
+    weights : np.ndarray
+        2 arrays, each row corresponds to a PC.
     """
     data = get_reducto_reports_relative(log=True)
     if standardize:
         data = (data - data.mean()) / data.std()
     pca = PCA(n_components=2).fit(data)
     print(f'Variance explained by the 2 components: {pca.explained_variance_ratio_}')
+    print(f'Total: {round(pca.explained_variance_ratio_.sum() * 100, 2)}%.')
     return pca.components_
 
 
