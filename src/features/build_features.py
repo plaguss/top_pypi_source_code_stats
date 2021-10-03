@@ -74,6 +74,9 @@ def get_reducto_reports_relative(log: bool = False) -> pd.DataFrame:
         )
 
     if log:
+        # no_outliers[['lines', 'number_of_functions', 'source_files']] = no_outliers[
+        #     ['lines', 'number_of_functions', 'source_files']
+        # ].apply(np.log)
         no_outliers[['lines', 'number_of_functions', 'source_files', 'average_function_length']] = no_outliers[
             ['lines', 'number_of_functions', 'source_files', 'average_function_length']
         ].apply(np.log)
@@ -82,9 +85,6 @@ def get_reducto_reports_relative(log: bool = False) -> pd.DataFrame:
 
 
 def get_pc(data: pd.DataFrame, standardize: bool = False) -> pd.DataFrame:
-    # data = get_reducto_reports_table_no_outliers()
-    # pca = PCA(n_components=2).fit(data)
-    # pca.explained_variance_ratio_
     if standardize:
         data = (data - data.mean()) / data.std()
     reduced_data = PCA(n_components=2).fit_transform(data)
@@ -117,9 +117,24 @@ def number_of_clusters(data: pd.DataFrame):
         sample_silhouette_values = silhouette_samples(data, cluster_labels)
 
 
-def kmeans_clustering(data: pd.DataFrame, clusters: int = 2):
-    k_means = KMeans(n_clusters=clusters, n_init=10)
-    k_means.fit(data)
+def principal_components_weights(standardize: bool = True):
+    """Compute and return the PC weights of the model selected, logarithm applied and
+    standardize variables
+
+    Parameters
+    ----------
+    standardize
+
+    Returns
+    -------
+
+    """
+    data = get_reducto_reports_relative(log=True)
+    if standardize:
+        data = (data - data.mean()) / data.std()
+    pca = PCA(n_components=2).fit(data)
+    print(f'Variance explained by the 2 components: {pca.explained_variance_ratio_}')
+    return pca.components_
 
 
 def get_downloads_per_package(data: Optional[pd.DataFrame] = None) -> pd.DataFrame:
