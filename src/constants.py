@@ -19,3 +19,6 @@ DB_LIBRARIES_PATH: pathlib.Path = PROCESSED / 'db_libraries.json'
 
 # Reducto table
 REDUCTO_TABLE = pathlib.Path = PROCESSED / 'reducto_reports.csv'
+
+REDUCTO_TABLE_ROOT = pathlib.Path = DATA_FOLDER.parent / 'reducto_reports.csv'
+DOWNLOADS_PER_PACKAGE_ROOT = pathlib.Path = DATA_FOLDER.parent / 'downloads_per_package.json'
