@@ -187,6 +187,19 @@ def get_downloads_per_package(
     return downloads
 
 
+def get_downloads_per_package_root(guide: List[str] = None):
+    """Watch get_downloads_per_package to see a guide of the function. """
+    with open(cte.DOWNLOADS_PER_PACKAGE_ROOT) as f:
+        data = json.load(f)
+
+    if isinstance(guide, list):
+        downloads = {k: v for k, v in data.items() if k in guide}
+
+        return downloads
+    else:
+        return data
+
+
 def dump_config(directory: Path, values: List[str]):
     with open(directory / "info.json", "w") as f:
         json.dump(values, f)
