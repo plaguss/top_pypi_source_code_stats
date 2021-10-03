@@ -37,6 +37,31 @@ def plot_average_function_length():
         axes[i].set_title(col)
 
 
+def plot_pc_weights():
+    pc1, pc2 = bf.principal_components_weights()
+    columns = [
+        'lines', 'source_lines', 'blank_lines', 'docstring_lines',
+        'comment_lines', 'average_function_length', 'number_of_functions',
+        'source_files'
+    ]
+    pc1_ = pd.DataFrame(pc1).T
+    pc1_.columns = columns
+    pc2_ = pd.DataFrame(pc2).T
+    pc2_.columns = columns
+
+    fig, axes = plt.subplots(1, 2, figsize=(15, 5), sharey=True)
+    fig.suptitle("Principal Component weights. ")
+
+    f = sns.barplot(data=pc1_, ax=axes[0])
+    f.set_title('PC1')
+    axes[0].set_xticklabels(columns, rotation=45)
+    axes[0].grid(True)
+    g = sns.barplot(data=pc2_, ax=axes[1])
+    g.set_title('PC2')
+    axes[1].set_xticklabels(columns, rotation=45)
+    axes[1].grid(True)
+
+
 def plot_pcs(log: bool = False):
     data = bf.get_pc(bf.get_reducto_reports_relative(log=log))
     sns.scatterplot(data=data, x='PC1', y='PC2')
