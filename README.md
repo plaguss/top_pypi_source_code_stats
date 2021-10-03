@@ -1,7 +1,11 @@
 top_pypi_source_code_stats
-==============================
+==========================
 
 Python's source code statistics from top PyPI packages
+
+See the analysis in the interactive notebook:
+
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/plaguss/top_pypi_source_code_stats/main?urlpath=https%3A%2F%2Fgithub.com%2Fplaguss%2Ftop_pypi_source_code_stats%2Freducto.ipynb)
 
 Project Organization
 ------------
