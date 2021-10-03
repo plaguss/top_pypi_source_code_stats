@@ -43,7 +43,9 @@ def reducto_explain_downloads(
         'source_files'
     ]
     guide = guide[columns_]
-    downloads = dwn.get_downloads_per_package(guide=list(guide.index))
+
+    downloads = dwn.get_downloads_per_package_root(guide=list(guide.index))
+    # downloads = dwn.get_downloads_per_package(guide=list(guide.index))
     y = list(downloads.values())
     X = guide.values
     X = sm.add_constant(X, prepend=True)
